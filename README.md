@@ -1,4 +1,4 @@
-# 🧠 WORKHEALTHLAB
+# WORKHEALTHLAB
 
 A visualization and analysis toolkit built by the **Work and Health** team at the University of Toronto.  
 Created and maintained by **Alexander Wilson**, Project Director of the [Work and Health](https://workandhealth.ca).
