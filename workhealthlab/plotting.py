@@ -180,6 +180,7 @@ def scatterplot(
 
     # ─── Titles outside plot ─────────────────────────────────────────────────────
     apply_titles(fig, title, subtitle, n=n)
+    has_subtitle = bool(subtitle and str(subtitle).strip())
 
     # ─── Enhanced Legend ─────────────────────────────────────────────────────────
     if group:
@@ -199,7 +200,7 @@ def scatterplot(
         legend.get_frame().set_alpha(0.9)
         plt.subplots_adjust(right=0.78)
 
-    plt.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 
@@ -221,9 +222,10 @@ def barchart(df, x, y, title=None, subtitle=None, palette=None, n=None):
     ax.bar(df[x], df[y], color=[palette[v] for v in df[x]], **get_data_element_kwargs())
     ax.set_xlabel(x.replace("_", " ").title())
     ax.set_ylabel(y.replace("_", " ").title())
-    apply_titles(fig, title or f"{y.title()} by {x.title()}", subtitle, n)
+    apply_titles(fig, title or f"{y.title()} by {x.title()}", subtitle, n=n)
     plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 
@@ -239,8 +241,9 @@ def histogram(df, x, bins=20, title=None, subtitle=None, color=None, n=None):
     ax.hist(df[x].dropna(), bins=bins, color=color, edgecolor="white", linewidth=0.5)
     ax.set_xlabel(x.replace("_", " ").title())
     ax.set_ylabel("Frequency")
-    apply_titles(fig, title or f"Distribution of {x}", subtitle, n)
-    plt.tight_layout()
+    apply_titles(fig, title or f"Distribution of {x}", subtitle, n=n)
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 
@@ -254,7 +257,8 @@ def heatmap(df, title=None, subtitle=None, cmap="viridis", annot=False):
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.heatmap(df.corr(), cmap=cmap, annot=annot, fmt=".2f", cbar_kws={"shrink": 0.8})
     apply_titles(fig, title or "Heatmap", subtitle)
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 
@@ -269,7 +273,8 @@ def clusterplot(df, method="ward", metric="euclidean", title=None, subtitle=None
     Z = linkage(df.select_dtypes(include=[np.number]), method=method, metric=metric)
     dendrogram(Z, ax=ax, leaf_rotation=90, leaf_font_size=10)
     apply_titles(fig, title or "Hierarchical Clustering Dendrogram", subtitle)
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 
@@ -291,7 +296,8 @@ def factorplot(df, n_factors=2, title=None, subtitle=None):
     ax.set_xlabel("Factor 1")
     ax.set_ylabel("Factor 2")
     apply_titles(fig, title or f"Factor Analysis ({n_factors} Factors)", subtitle)
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 
@@ -339,7 +345,8 @@ def waterfallchart(df, x, y, title=None, subtitle=None, color_pos="Greens", colo
     ax.set_ylabel(y.title())
     ax.grid(axis="y", color="grey", linestyle=":", linewidth=0.7)
     apply_titles(fig, title or f"Waterfall Chart of {y.title()} by {x.title()}", subtitle, n=len(df))
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     return fig, ax
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -499,7 +506,8 @@ def stacked_responses(
     if leg.get_title():
         leg.get_title().set_fontfamily("Arial")
 
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     plt.show()
     return out
 
@@ -612,10 +620,10 @@ def pie_chart(
         t.set_fontweight("bold")
         t.set_color("#333333")
 
-    ax.set_title(title, fontsize=14, fontweight="bold", family="Arial", pad=20)
     apply_titles(fig, title, subtitle)
 
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     plt.show()
     return proportions
 
@@ -752,7 +760,7 @@ def distribution_chart(
     ax.set_ylabel("Count", fontsize=12, weight="bold", color="grey")
 
     n = len(sub)
-    apply_titles(fig, f"{title} (n={n})", subtitle)
+    apply_titles(fig, title, subtitle, n=n)
 
     # --- Legend drawing ---
     line_height = 0.035
@@ -787,6 +795,8 @@ def distribution_chart(
         # For continuous color mapping, single legend
         draw_group("Groups", list(palette.keys()), col1_x, y_start)
 
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 0.72, 0.9 if has_subtitle else 0.94))
     plt.subplots_adjust(right=0.72)
     plt.show()
 
@@ -967,14 +977,15 @@ def trend_chart(
 
     # --- Titles ---
     n = len(df)
-    apply_titles(fig, f"{title} (n={n})", subtitle)
+    apply_titles(fig, title, subtitle, n=n)
 
     # --- Legend ---
     if group:
         leg_title = legend_title or group.replace("_", " ").title()
         ax.legend(title=leg_title, frameon=False, fontsize=9, loc="best")
 
-    plt.tight_layout()
+    has_subtitle = bool(subtitle and str(subtitle).strip())
+    fig.tight_layout(rect=(0, 0, 1, 0.9 if has_subtitle else 0.94))
     plt.show()
 
     return {"palette": palette, "figure": fig}
