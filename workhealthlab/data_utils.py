@@ -20,9 +20,10 @@ warnings.filterwarnings("ignore")
 # =============================================================================
 
 def resolve_qwels_root() -> Path:
-    """Locate the QWELS directory relative to current working dir."""
+    """Locate the QWELS directory relative to the current working directory."""
+
     cwd = Path.cwd()
-    for parent in cwd.parents:
+    for parent in [cwd, *cwd.parents]:
         if (parent / "ANALYSIS" / "DATASETS").exists():
             return parent
     raise FileNotFoundError("❌ Could not locate QWELS directory (expecting 'ANALYSIS/DATASETS').")
@@ -37,39 +38,41 @@ def get_data_dir() -> Path:
 # DATA DISCOVERY
 # =============================================================================
 
-def discover_dta_files(data_dir: Optional[Path] = None, exclude: Optional[List[str]] = None) -> List[Path]:
-    """Return a list of all .dta files, excluding those in the exclude list."""
-    data_dir = data_dir or get_data_dir()
-    exclude = exclude or []
+def discover_dta_files(
+    data_dir: Optional[Path] = None,
+    exclude: Optional[List[str]] = None,
+) -> List[Path]:
+    """Return a sorted list of ``.dta`` files, excluding filenames in ``exclude``."""
+
+    data_dir = Path(data_dir) if data_dir else get_data_dir()
+    if not data_dir.exists():
+        raise FileNotFoundError(f"Data directory not found: {data_dir}")
+
+    exclude = set(exclude or [])
     files = [f for f in data_dir.glob("*.dta") if f.stem not in exclude]
     return sorted(files)
 
 
 def summarize_datasets(data_dir: Optional[Path] = None) -> pd.DataFrame:
-    """Return a searchable summary table of available datasets."""
-    data_dir = data_dir or get_data_dir()
+    """Return a summary table of available datasets (always as a DataFrame)."""
+
+    data_dir = Path(data_dir) if data_dir else get_data_dir()
     files = discover_dta_files(data_dir)
     summary = []
     for f in files:
         size_mb = round(f.stat().st_size / (1024 ** 2), 2)
         summary.append({"dataset": f.stem, "size_MB": size_mb, "path": str(f)})
+
     df = pd.DataFrame(summary).sort_values("dataset")
 
-    # Jupyter display
-    try:
-        import qgrid
-        return qgrid.show_grid(df, show_toolbar=True)
+    try:  # Optional pretty display in notebook environments
+        from IPython.display import display  # type: ignore
+
+        display(df)
     except Exception:
-        try:
-            from IPython.display import display
-            from ipywidgets import interact
-            @interact(filter="")
-            def _show(filter=""):
-                subset = df[df["dataset"].str.contains(filter, case=False, na=False)]
-                display(subset)
-        except Exception:
-            pass
-        return df
+        pass
+
+    return df
 
 
 # =============================================================================
@@ -108,21 +111,27 @@ def load_dta(path: Union[str, Path], columns: Optional[List[str]] = None) -> pd.
 # VARIABLE SEARCH
 # =============================================================================
 
-def find_variable_across_datasets(var_name: str, data_dir: Optional[Path] = None, exclude: Optional[List[str]] = None) -> pd.DataFrame:
-    """
-    Search all .dta files for presence of a variable.
-    Returns a summary DataFrame with matches.
-    """
-    data_dir = data_dir or get_data_dir()
+def find_variable_across_datasets(
+    var_name: str,
+    data_dir: Optional[Path] = None,
+    exclude: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """Search ``.dta`` files for the presence of ``var_name`` (case-insensitive)."""
+
+    data_dir = Path(data_dir) if data_dir else get_data_dir()
+    var_name = var_name.lower()
     matches = []
     for f in discover_dta_files(data_dir, exclude):
         try:
-            cols = pd.io.stata.StataReader(f).variables()
-            if any(var_name.lower() == c.lower() for c in cols):
+            reader = pd.io.stata.StataReader(str(f))
+            cols = [c.lower() for c in reader.varlist]
+            reader.close()
+            if var_name in cols:
                 matches.append({"dataset": f.stem, "path": str(f)})
         except Exception:
             continue
     return pd.DataFrame(matches)
+
 
 
 # =============================================================================
@@ -130,15 +139,18 @@ def find_variable_across_datasets(var_name: str, data_dir: Optional[Path] = None
 # =============================================================================
 
 def discover_data(
-    data_dir: Optional[Path],
-    construct_names: List[str],
-    predictors: List[str],
+    data_dir: Optional[Path] = None,
+    construct_names: Optional[List[str]] = None,
+    predictors: Optional[List[str]] = None,
     exclude_list: Optional[List[str]] = None,
 ) -> Dict[str, pd.DataFrame]:
     """
     Scan directory for .dta files containing any of the construct or predictor vars.
     """
-    data_dir = data_dir or get_data_dir()
+    if construct_names is None or predictors is None:
+        raise ValueError("construct_names and predictors must be provided.")
+
+    data_dir = Path(data_dir) if data_dir else get_data_dir()
     exclude_list = exclude_list or []
     relevant_surveys = {}
 
@@ -148,11 +160,14 @@ def discover_data(
         print("⚠️ No .dta files found.")
         return {}
 
+    constructs = {c.lower() for c in construct_names}
+    predictor_set = {p.lower() for p in predictors}
+
     for f in files:
         try:
             df = pd.read_stata(f, convert_categoricals=True)
             df.columns = [c.lower() for c in df.columns]
-            if any(c in df.columns for c in construct_names) and any(p in df.columns for p in predictors):
+            if constructs.intersection(df.columns) and predictor_set.intersection(df.columns):
                 relevant_surveys[f.stem] = df
                 print(f"  ✓ Loaded: {f.stem} ({len(df):,} rows)")
         except Exception as e:

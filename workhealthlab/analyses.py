@@ -15,16 +15,41 @@ Usage:
     wha.weighted_regression(df, "jobsat ~ mastery + meaning", weight="weight")
 """
 
-import pandas as pd
-import numpy as np
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
 from typing import Optional
+
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from rich.console import Console
 
-console = Console()
+try:  # Optional dependency: statsmodels
+    import statsmodels.api as sm
+    import statsmodels.formula.api as smf
+except ModuleNotFoundError:  # pragma: no cover - environment without statsmodels
+    sm = None
+    smf = None
+
+try:  # Optional dependency: rich (pretty console output)
+    from rich.console import Console
+except ModuleNotFoundError:  # pragma: no cover - fallback to basic printing
+    class Console:  # type: ignore
+        """Lightweight stand-in replicating the subset of Console we need."""
+
+        def print(self, *args, **kwargs):
+            print(*args, **kwargs)
+
+        def rule(self, text=""):
+            print(text)
+
+    console = Console()
+else:
+    console = Console()
+
+try:  # Optional dependency used for pretty notebook output
+    from IPython.display import display  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback for plain Python
+    def display(obj):
+        print(obj)
 
 
 # =============================================================================
@@ -117,6 +142,11 @@ def weighted_regression(
     robust: bool = True,
 ):
     """Run weighted OLS or logistic regression with clean output."""
+    if sm is None or smf is None:
+        raise ImportError(
+            "statsmodels is required for weighted_regression. Install statsmodels to use this function."
+        )
+
     weight = weight or _detect_weight_col(df)
     if weight is None:
         console.print("⚠️ No weights found — running unweighted model.")

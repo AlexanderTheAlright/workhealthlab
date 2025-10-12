@@ -102,26 +102,49 @@ def generate_semantic_palette(groups: dict):
 # III. STRUCTURED TITLING
 # ══════════════════════════════════════════════════════════════════════════════
 
-def apply_titles(fig, main_title, subtitle=None, n=None):
-    """
-    Add standardized WorkHealthLab title block.
+def apply_titles(fig, main_title, subtitle=None, n=None, align=None):
+    """Add a standardized WorkHealthLab title block to a figure."""
 
-    Parameters
-    ----------
-    fig : matplotlib.figure.Figure
-    main_title : str
-    subtitle : str, optional
-    n : int, optional
-        Sample size to append in main title (e.g., n=300)
-    """
-    title = main_title
+    if not main_title:
+        return
+
+    subtitle = subtitle if subtitle and str(subtitle).strip() else None
+    text = main_title
     if n is not None:
-        title = f"{title} (n={n})"
-    fig.text(0.01, 0.98, title, fontsize=20, fontweight="bold",
-             ha="left", va="top", color="#333333")
+        text = f"{text} (n={n:,})"
+
+    if align is None:
+        align = "left" if subtitle else "center"
+    if align not in {"left", "center"}:
+        raise ValueError("align must be 'left' or 'center'")
+
+    x = 0.5 if align == "center" else 0.01
+    ha = "center" if align == "center" else "left"
+
+    top = 0.94 if subtitle else 0.92
+    fig.subplots_adjust(top=top)
+
+    fig.text(
+        x,
+        0.98 if subtitle else 0.95,
+        text,
+        fontsize=20,
+        fontweight="bold",
+        ha=ha,
+        va="top",
+        color="#333333",
+    )
+
     if subtitle:
-        fig.text(0.01, 0.93, subtitle, fontsize=14, ha="left",
-                 va="top", color="grey")
+        fig.text(
+            x,
+            0.93,
+            subtitle,
+            fontsize=14,
+            ha=ha,
+            va="top",
+            color="grey",
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
