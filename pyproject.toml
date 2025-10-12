@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "workhealthlab"
+version = "0.1.0"
+description = "Data visualization and styling tools for the WorkHealth Lab"
+authors = [{ name = "Alexander Wilson", email = "alex@example.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "numpy>=1.25",
+]
+
+[project.urls]
+Homepage = "https://github.com/Alexander/workhealthlab"
+
+[tool.setuptools.packages.find]
+where = ["."]
