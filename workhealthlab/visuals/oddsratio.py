@@ -79,7 +79,7 @@ def oddsratio(
     Examples
     --------
     From fitted model:
-    >>> from sociopathit.analyses.regress import logit
+    >>> from workhealthlab.analyses.regress import logit
     >>> model = logit(df, 'hired', ['age', 'education', 'experience'])
     >>> oddsratio(model, title='Predictors of Being Hired')
 
@@ -155,9 +155,9 @@ def oddsratio(
 
     # Plot confidence intervals
     if ci_low_col in coef_df.columns and ci_high_col in coef_df.columns:
-        for i, row in enumerate(coef_df.itertuples()):
-            ci_low = getattr(row, ci_low_col)
-            ci_high = getattr(row, ci_high_col)
+        for i, (idx, row) in enumerate(coef_df.iterrows()):
+            ci_low = row[ci_low_col]
+            ci_high = row[ci_high_col]
             ax.plot([ci_low, ci_high], [i, i], color=main_color, linewidth=2, alpha=0.6, zorder=2)
 
     # Reference line
@@ -370,5 +370,150 @@ def oddsratio_comparison(
 
     if output_path:
         fig.savefig(output_path, dpi=300, bbox_inches='tight')
+
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INTERACTIVE VERSION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def oddsratio_interactive(
+    model=None,
+    coef_df=None,
+    exclude_intercept=True,
+    log_scale=False,
+    ci_level=0.95,
+    title=None,
+    subtitle=None,
+    xlabel=None,
+    var_labels=None,
+    style_mode="viridis",
+):
+    """Interactive odds ratio forest plot using Plotly."""
+    import plotly.graph_objects as go
+
+    # Get coefficient data
+    if model is not None:
+        if not hasattr(model, 'get_tidy'):
+            raise TypeError("model must have get_tidy() method")
+        coef_df = model.get_tidy()
+    elif coef_df is None:
+        raise ValueError("Either model or coef_df must be provided")
+
+    coef_df = coef_df.copy()
+
+    # Exclude intercept if requested
+    if exclude_intercept:
+        coef_df = coef_df[~coef_df['term'].isin(['const', 'Intercept', 'intercept'])]
+
+    if len(coef_df) == 0:
+        raise ValueError("No coefficients to plot after filtering")
+
+    # Convert log odds to odds ratios
+    if not log_scale:
+        coef_df['or'] = np.exp(coef_df['estimate'])
+        if 'conf.low' in coef_df.columns:
+            coef_df['or_ci_low'] = np.exp(coef_df['conf.low'])
+            coef_df['or_ci_high'] = np.exp(coef_df['conf.high'])
+        plot_col = 'or'
+        ci_low_col = 'or_ci_low'
+        ci_high_col = 'or_ci_high'
+        ref_line = 1.0
+    else:
+        plot_col = 'estimate'
+        ci_low_col = 'conf.low'
+        ci_high_col = 'conf.high'
+        ref_line = 0.0
+
+    # Apply variable labels
+    if var_labels:
+        coef_df['label'] = coef_df['term'].map(lambda x: var_labels.get(x, x))
+    else:
+        coef_df['label'] = coef_df['term'].str.replace('_', ' ').str.title()
+
+    # Sort by effect size
+    coef_df = coef_df.sort_values(plot_col, ascending=True)
+
+    # Get color
+    color_map = COLORS_DICT.get(style_mode, plt.cm.viridis)
+    if callable(color_map):
+        main_color = color_map(0.6)
+    else:
+        main_color = 'steelblue'
+
+    if hasattr(main_color, '__iter__'):
+        color_str = f"rgba({int(main_color[0]*255)},{int(main_color[1]*255)},{int(main_color[2]*255)},0.8)"
+    else:
+        color_str = main_color
+
+    fig = go.Figure()
+
+    # Add CI error bars
+    if ci_low_col in coef_df.columns and ci_high_col in coef_df.columns:
+        fig.add_trace(go.Scatter(
+            x=coef_df[plot_col],
+            y=coef_df['label'],
+            error_x=dict(
+                type='data',
+                symmetric=False,
+                array=coef_df[ci_high_col] - coef_df[plot_col],
+                arrayminus=coef_df[plot_col] - coef_df[ci_low_col],
+                color=color_str,
+                thickness=2,
+            ),
+            mode='markers',
+            marker=dict(color=color_str, size=10),
+            hovertemplate='<b>%{y}</b><br>OR: %{x:.3f}<extra></extra>',
+            showlegend=False,
+        ))
+    else:
+        fig.add_trace(go.Scatter(
+            x=coef_df[plot_col],
+            y=coef_df['label'],
+            mode='markers',
+            marker=dict(color=color_str, size=10),
+            hovertemplate='<b>%{y}</b><br>OR: %{x:.3f}<extra></extra>',
+            showlegend=False,
+        ))
+
+    # Reference line
+    fig.add_vline(x=ref_line, line_dash="dash", line_color="grey", line_width=1.5)
+
+    # Layout
+    if xlabel is None:
+        xlabel = 'Log Odds' if log_scale else 'Odds Ratio'
+
+    title_dict = {}
+    if subtitle:
+        title_dict = dict(
+            text=f"<b>{title or 'Odds Ratios'}</b>"
+                 + f"<br><span style='color:grey;font-size:14px;'>{subtitle}</span>",
+            x=0.02,
+            xanchor="left",
+            yanchor="top",
+            y=0.96,
+        )
+    else:
+        title_dict = dict(
+            text=f"<b>{title or 'Odds Ratios'}</b>",
+            x=0.5,
+            xanchor="center",
+            yanchor="top",
+            y=0.96,
+        )
+
+    fig.update_layout(
+        template="plotly_white",
+        height=max(400, len(coef_df) * 40),
+        margin=dict(t=90, b=50, l=150, r=30),
+        title=title_dict,
+        xaxis_title=dict(text=xlabel, font=dict(size=12, color="black")),
+        plot_bgcolor="white",
+        xaxis_type="log" if not log_scale else "linear",
+    )
+
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(180,180,180,0.3)", tickfont=dict(size=11, color="#333"))
+    fig.update_yaxes(tickfont=dict(size=11, color="#333"))
 
     return fig

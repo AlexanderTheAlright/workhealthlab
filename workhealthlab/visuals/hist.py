@@ -20,7 +20,7 @@ from matplotlib import cm
 from scipy.interpolate import make_interp_spline
 
 # Correct relative import (visuals → utils)
-from ..utils.style import set_style, apply_titles, get_data_element_kwargs
+from ..utils.style import set_style, apply_titles, get_data_element_kwargs, get_color
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -130,7 +130,7 @@ def histogram(
     # ─── Threshold lines (without annotated number blocks) ────────────────────────────────────────────────────────
     if thresholds:
         for thresh in thresholds:
-            ax.axvline(thresh, color="red", linestyle="--", linewidth=1.5, alpha=0.8, zorder=4)
+            ax.axvline(thresh, color=get_color('threshold', style_mode), linestyle="--", linewidth=1.5, alpha=0.8, zorder=4)
 
     # ─── Axis styling ───────────────────────────────────────────────────────────
     ax.set_xlabel(x.replace("_", " ").title(), fontsize=12, weight="bold", color="black")
@@ -236,7 +236,8 @@ def histogram_interactive(
     # Threshold lines
     if thresholds:
         for thresh in thresholds:
-            fig.add_vline(x=thresh, line=dict(color="red", width=2, dash="dash"),
+            thresh_color = get_color('threshold', style_mode)
+            fig.add_vline(x=thresh, line=dict(color=thresh_color, width=2, dash="dash"),
                          annotation_text=f"{thresh}", annotation_position="top")
 
     # Build title

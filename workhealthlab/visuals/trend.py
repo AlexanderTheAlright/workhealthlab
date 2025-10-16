@@ -18,7 +18,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from scipy.ndimage import gaussian_filter1d
 from matplotlib import cm
-from ..utils.style import set_style, generate_semantic_palette, apply_titles
+from ..utils.style import set_style, generate_semantic_palette, apply_titles, get_color
 
 
 def trend(
@@ -91,9 +91,9 @@ def trend(
                 if annotate:
                     last_val = ys[-1]
                     ax.text(xs[-1], last_val, f"{last_val:.1f}",
-                            ha="left", va="center", fontsize=10, color=color, weight="bold",
-                            bbox=dict(facecolor="white", edgecolor=color, linewidth=0.8,
-                                      boxstyle="round,pad=0.3", alpha=0.9))
+                            ha="left", va="center", fontsize=10, color="black", weight="bold",
+                            bbox=dict(facecolor="white", edgecolor='#333333', linewidth=1.5,
+                                      boxstyle="round,pad=0.3", alpha=0.95))
         else:
             df_sorted = df.sort_values(x).reset_index(drop=True)
             xs, ys = df_sorted[x].values, df_sorted[y].values
@@ -112,12 +112,13 @@ def trend(
 
     # --- Event lines ---
     if event_lines:
+        event_color = get_color('warning', style_mode)
         for x_val, label in event_lines.items():
-            ax.axvline(x=x_val, color="red", linestyle="--", lw=1.5, alpha=0.7, zorder=2)
+            ax.axvline(x=x_val, color=event_color, linestyle="--", lw=1.5, alpha=0.7, zorder=2)
             ax.text(x_val, ax.get_ylim()[1] * 0.95, label,
-                    rotation=90, va="top", ha="right", fontsize=9, color="red", weight="bold",
-                    bbox=dict(facecolor="white", edgecolor="red", linewidth=1.0,
-                              boxstyle="round,pad=0.3", alpha=0.9))
+                    rotation=90, va="top", ha="right", fontsize=9, color="black", weight="bold",
+                    bbox=dict(facecolor="white", edgecolor='#333333', linewidth=1.5,
+                              boxstyle="round,pad=0.3", alpha=0.95))
 
     # --- Styling ---
     ax.set_xlabel(x.replace("_", " ").title(), fontsize=12, weight="bold", color="black")
@@ -231,8 +232,9 @@ def trend_interactive(
 
     # Event lines
     if event_lines:
+        event_color = get_color('warning', style_mode)
         for x_val, label in event_lines.items():
-            fig.add_vline(x=x_val, line=dict(color="red", width=2, dash="dash"),
+            fig.add_vline(x=x_val, line=dict(color=event_color, width=2, dash="dash"),
                          annotation_text=label, annotation_position="top right")
 
     fig.update_layout(

@@ -114,9 +114,9 @@ def coef(
                 va="bottom",
                 fontsize=11,
                 fontweight="bold" if sig else "normal",
-                color="#111111" if sig else "#333333",
-                bbox=dict(facecolor="white", edgecolor="lightgrey" if not sig else colors[i],
-                         linewidth=1.2 if sig else 0.8, boxstyle="round,pad=0.3", alpha=0.95),
+                color="black",
+                bbox=dict(facecolor="white", edgecolor='#333333',
+                         linewidth=1.5, boxstyle="round,pad=0.3", alpha=0.95),
                 zorder=4,
             )
 
@@ -124,11 +124,21 @@ def coef(
     ax.axvline(0, color="grey", linestyle="--", lw=1, alpha=0.7)
 
     ax.set_yticks(range(len(df)))
-    ax.set_yticklabels(
-        df[term_col].astype(str).str.replace("_", " ").str.title(),
-        fontsize=12,
-        color="#222222",
-    )
+    # Bold y-axis labels when significant
+    y_labels = []
+    for i, row in df.iterrows():
+        label = str(row[term_col]).replace("_", " ").title()
+        sig = p_col and p_col in df.columns and row[p_col] < 0.05
+        y_labels.append(label)
+
+    ax.set_yticklabels(y_labels, fontsize=12, color="#222222")
+
+    # Bold the significant labels
+    if p_col and p_col in df.columns:
+        for i, (tick, row) in enumerate(zip(ax.get_yticklabels(), df.iterrows())):
+            idx, row_data = row
+            if row_data[p_col] < 0.05:
+                tick.set_fontweight('bold')
     ax.set_xlabel("Coefficient Estimate", fontsize=13, weight="bold", color="black")
     ax.tick_params(axis="x", labelsize=11)
     ax.grid(axis="x", linestyle=":", color="grey", linewidth=0.7, alpha=0.7)
@@ -233,9 +243,19 @@ def coef_interactive(
         )
 
     fig.add_vline(x=0, line=dict(color="grey", width=1, dash="dash"))
+
+    # Bold y-axis labels when significant
+    ticktext_list = []
+    for i, row in df.iterrows():
+        label = str(row[term_col]).replace("_", " ").title()
+        p = row[p_col] if (p_col and p_col in df.columns) else 1.0
+        if p < 0.05:
+            label = f"<b>{label}</b>"
+        ticktext_list.append(label)
+
     fig.update_yaxes(
         tickvals=list(range(len(df))),
-        ticktext=df[term_col].astype(str).str.replace("_", " ").str.title(),
+        ticktext=ticktext_list,
         autorange="reversed",
         range=[-0.5, len(df) - 0.5],  # prevents clipping of spikes
     )

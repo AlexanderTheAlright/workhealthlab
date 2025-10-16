@@ -52,7 +52,7 @@ def save_model(
 
     Examples
     --------
-    >>> from sociopathit.analyses.regress import ols
+    >>> from workhealthlab.analyses.regress import ols
     >>> model = ols(df, 'y', ['x1', 'x2'])
     >>> save_model(model, 'my_model.json')
     """

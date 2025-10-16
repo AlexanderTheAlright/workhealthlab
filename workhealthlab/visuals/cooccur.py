@@ -95,15 +95,16 @@ def cooccur(
         axes = [axes]
     fig.set_facecolor("white")
 
-    # Compact global title block
-    fig.suptitle(
+    # Compact global title block - position top left
+    fig.text(
+        0.02, 0.995,
         f"Co-occurrence Networks for Top {top_n} Central Terms",
-        fontsize=16, fontweight="bold", color="#111111", y=0.995,
+        fontsize=16, fontweight="bold", color="#111111", ha="left", va="top",
     )
     fig.text(
-        0.5, 0.982,
+        0.02, 0.982,
         f"Nodes shaded by betweenness centrality (showing top {max_neighbors} neighbors)",
-        ha="center", fontsize=11, color="grey",
+        ha="left", fontsize=11, color="grey",
     )
 
     cmap = cm.get_cmap("viridis")
@@ -127,7 +128,16 @@ def cooccur(
 
         node_centralities = _compute_centrality(G)
         pos = nx.spring_layout(G, k=0.7 if density_mode else 1.0, iterations=40, seed=42)
-        node_sizes = [np.log(data["size"] + 2) * 300 for _, data in G.nodes(data=True)]
+        # Increase node sizes dynamically based on text length
+        node_sizes = []
+        for node, data in G.nodes(data=True):
+            text_len = len(str(node))
+            # Base size on logarithm of count plus text length factor
+            base_size = np.log(data["size"] + 2) * 600
+            # Add extra size based on text length (minimum 50 per character)
+            text_size = text_len * 50
+            node_sizes.append(max(base_size, text_size))
+
         node_colors = [cmap(node_centralities.get(n, 0.1)) for n in G.nodes()]
         weights = np.array([G[u][v]["weight"] for u, v in G.edges()])
         edge_widths = 0.5 + 5 * (weights / weights.max())
@@ -226,13 +236,17 @@ def cooccur_interactive(
             row=i, col=1
         )
 
-        # Nodes
+        # Nodes - dynamic sizing based on text length
         xs, ys, texts, sizes, colors = [], [], [], [], []
         for node, data in G.nodes(data=True):
             x, y = pos[node]
             xs.append(x); ys.append(y)
             texts.append(f"<b>{node}</b><br>Centrality: {node_centralities.get(node, 0):.3f}")
-            sizes.append(12 + np.log(data["size"] + 1) * 18)
+            # Increase node sizes dynamically based on text length
+            text_len = len(str(node))
+            base_size = 18 + np.log(data["size"] + 1) * 25
+            text_size = text_len * 3  # 3 pixels per character
+            sizes.append(max(base_size, text_size))
             c = cmap(node_centralities.get(node, 0))
             colors.append(f"rgba({int(c[0]*255)}, {int(c[1]*255)}, {int(c[2]*255)}, {c[3]:.2f})")
 

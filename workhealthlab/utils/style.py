@@ -109,13 +109,13 @@ def generate_semantic_palette(groups: dict, mode: str = None):
         ranges = {"positive": (0.4, 0.85), "neutral": (0.4, 0.6), "negative": (0.4, 0.85)}
 
     elif style == "reviewer3":
-        # Pure grayscale — perfect for publication
+        # High contrast black and white first, then grayscale — perfect for publication
         cmaps = {"positive": cm.Greys, "neutral": cm.Greys, "negative": cm.Greys}
         ranges = {"positive": (0.25, 0.85), "neutral": (0.25, 0.85), "negative": (0.25, 0.85)}
 
     else:  # viridis
-        cmaps = {"positive": cm.viridis, "neutral": cm.Greys, "negative": cm.autumn_r}
-        ranges = {"positive": (0.4, 0.9), "neutral": (0.4, 0.7), "negative": (0.2, 0.7)}
+        cmaps = {"positive": cm.viridis, "neutral": cm.viridis, "negative": cm.viridis}
+        ranges = {"positive": (0.2, 0.9), "neutral": (0.3, 0.7), "negative": (0.1, 0.6)}
 
     # Build palette
     for group, items in groups.items():
@@ -126,15 +126,45 @@ def generate_semantic_palette(groups: dict, mode: str = None):
               "neutral" if g.startswith("neu") else \
               "negative" if g.startswith("neg") else "positive"
         cmap, (low, high) = cmaps[key], ranges[key]
-        vals = np.linspace(low, high, len(items))
-        for item, v in zip(items, vals):
-            palette[item] = cmap(v)
+
+        # Special handling for reviewer3: use high contrast black/white first, then grayscale
+        if style == "reviewer3":
+            if len(items) == 1:
+                # Single item gets black
+                palette[items[0]] = (0, 0, 0, 1)
+            elif len(items) == 2:
+                # Two items get black and white with black border
+                palette[items[0]] = (0, 0, 0, 1)  # Black
+                palette[items[1]] = (1, 1, 1, 1)  # White
+            else:
+                # Three or more: black, white, then grayscale
+                palette[items[0]] = (0, 0, 0, 1)  # Black
+                palette[items[1]] = (1, 1, 1, 1)  # White
+                # Remaining items use grayscale
+                vals = np.linspace(low, high, len(items) - 2)
+                for item, v in zip(items[2:], vals):
+                    palette[item] = cmap(v)
+        else:
+            # Standard behavior for other styles
+            vals = np.linspace(low, high, len(items))
+            for item, v in zip(items, vals):
+                palette[item] = cmap(v)
     return palette
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # II.B. CONTINUOUS COLORMAPS FOR HEATMAPS
 # ══════════════════════════════════════════════════════════════════════════════
+
+# Dictionary mapping style modes to their primary colormaps
+COLORS_DICT = {
+    "fiery": cm.inferno,
+    "viridis": cm.viridis,
+    "sentiment": cm.RdYlGn,
+    "plainjane": cm.RdBu_r,
+    "reviewer3": cm.Greys,
+}
+
 
 def get_continuous_cmap(mode: str = None):
     """
@@ -282,3 +312,114 @@ def draw_scatter_legend(ax, fig, title, var_list, palette,
                  ha="left", va="center")
         y -= line_height
     return y - spacing
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# VI. SEMANTIC COLOR RETRIEVAL (THEME-AWARE)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def get_color(semantic: str, mode: str = None) -> str:
+    """
+    Get theme-aware color for semantic use cases.
+
+    For reviewer3, all colors map to grayscale (black/white/gray).
+    For other themes, returns appropriate colors.
+
+    Parameters
+    ----------
+    semantic : str
+        One of: 'negative', 'positive', 'neutral', 'warning', 'highlight',
+                'line', 'threshold', 'reference', 'primary', 'secondary'
+    mode : str, optional
+        Override style. If None, uses ACTIVE_STYLE.
+
+    Returns
+    -------
+    color : str
+        Color string (hex, rgb, or named color).
+
+    Examples
+    --------
+    >>> get_color('warning')  # Returns 'red' in most themes, '#333333' in reviewer3
+    >>> get_color('positive', mode='reviewer3')  # Returns '#666666'
+    """
+    style = (mode or globals().get("ACTIVE_STYLE", "viridis")).lower()
+
+    if style == "reviewer3":
+        # Pure grayscale mapping for publication
+        color_map = {
+            'negative': '#000000',      # Black for negative/warnings
+            'positive': '#666666',      # Medium gray for positive
+            'neutral': '#999999',       # Light gray for neutral
+            'warning': '#000000',       # Black for warnings/thresholds
+            'highlight': '#333333',     # Dark gray for highlights
+            'line': '#666666',          # Medium gray for lines
+            'threshold': '#000000',     # Black for thresholds
+            'reference': '#000000',     # Black for reference lines
+            'primary': '#333333',       # Dark gray primary
+            'secondary': '#999999',     # Light gray secondary
+            'increasing': '#666666',    # Medium gray
+            'decreasing': '#333333',    # Dark gray
+        }
+    elif style == "sentiment":
+        color_map = {
+            'negative': '#d62728',      # Red
+            'positive': '#2ca02c',      # Green
+            'neutral': '#7f7f7f',       # Gray
+            'warning': '#d62728',       # Red
+            'highlight': '#ff7f0e',     # Orange
+            'line': '#1f77b4',          # Blue
+            'threshold': '#d62728',     # Red
+            'reference': '#d62728',     # Red
+            'primary': '#1f77b4',       # Blue
+            'secondary': '#ff7f0e',     # Orange
+            'increasing': '#2ca02c',    # Green
+            'decreasing': '#d62728',    # Red
+        }
+    elif style == "fiery":
+        color_map = {
+            'negative': '#d62728',      # Red
+            'positive': '#ff7f0e',      # Orange
+            'neutral': '#8c564b',       # Brown
+            'warning': '#d62728',       # Red
+            'highlight': '#ff7f0e',     # Orange
+            'line': '#e377c2',          # Pink
+            'threshold': '#d62728',     # Red
+            'reference': '#d62728',     # Red
+            'primary': '#d62728',       # Red
+            'secondary': '#ff7f0e',     # Orange
+            'increasing': '#ff7f0e',    # Orange
+            'decreasing': '#8c564b',    # Brown
+        }
+    elif style == "plainjane":
+        color_map = {
+            'negative': '#d62728',      # Red
+            'positive': '#1f77b4',      # Blue
+            'neutral': '#7f7f7f',       # Gray
+            'warning': '#d62728',       # Red
+            'highlight': '#ff7f0e',     # Orange
+            'line': '#1f77b4',          # Blue
+            'threshold': '#d62728',     # Red
+            'reference': '#d62728',     # Red
+            'primary': '#1f77b4',       # Blue
+            'secondary': '#d62728',     # Red
+            'increasing': '#1f77b4',    # Blue
+            'decreasing': '#d62728',    # Red
+        }
+    else:  # viridis
+        color_map = {
+            'negative': '#d62728',      # Red
+            'positive': '#2ca02c',      # Green
+            'neutral': '#7f7f7f',       # Gray
+            'warning': '#d62728',       # Red
+            'highlight': '#ff7f0e',     # Orange
+            'line': '#1f77b4',          # Blue
+            'threshold': '#d62728',     # Red
+            'reference': '#d62728',     # Red
+            'primary': '#440154',       # Viridis dark purple
+            'secondary': '#fde724',     # Viridis yellow
+            'increasing': '#2ca02c',    # Green
+            'decreasing': '#d62728',    # Red
+        }
+
+    return color_map.get(semantic, '#333333')

@@ -135,8 +135,8 @@ def pie(
                 va="center",
                 fontsize=11,
                 weight="bold",
-                color="#222222",
-                bbox=dict(facecolor="white", edgecolor="none", boxstyle="round,pad=0.35"),
+                color="black",
+                bbox=dict(facecolor="white", edgecolor='#333333', linewidth=1.5, boxstyle="round,pad=0.35", alpha=0.95),
             )
 
     # --- Titles and footer ---

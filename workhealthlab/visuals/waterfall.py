@@ -152,7 +152,10 @@ def waterfall_interactive(
     pos_cmap = cm.get_cmap("Greens")
     neg_cmap = cm.get_cmap("Blues_r")
 
-    colors.append(pos_cmap(0.6))  # First bar
+    # First bar
+    first_rgba = pos_cmap(0.6)
+    colors.append(f"rgba({int(first_rgba[0]*255)},{int(first_rgba[1]*255)},{int(first_rgba[2]*255)},{first_rgba[3]})")
+
     for d in deltas:
         if d >= 0:
             norm_val = 0.3 + 0.6 * (d / vmax) if vmax != 0 else 0.6
@@ -164,6 +167,8 @@ def waterfall_interactive(
 
     labels = [df[x].iloc[0]] + [f"{p}→{n}" for p, n in zip(df[x].iloc[:-1], df[x].iloc[1:])]
 
+    # Determine increasing/decreasing/totals colors from the provided colors list
+    # For Plotly waterfall, we use increasing/decreasing/totals parameters instead of marker.color
     fig = go.Figure(go.Waterfall(
         x=labels,
         y=display_values,
@@ -171,7 +176,9 @@ def waterfall_interactive(
         textposition="inside",
         text=[f"+{v:.1f}" if v > 0 else f"−{abs(v):.1f}" for v in display_values],
         connector={"line": {"color": "grey", "dash": "dash", "width": 1.5}} if connector_lines else {"visible": False},
-        marker={"color": colors},
+        increasing={"marker": {"color": pos_color}},
+        decreasing={"marker": {"color": neg_color}},
+        totals={"marker": {"color": "steelblue"}},
     ))
 
     fig.update_layout(
