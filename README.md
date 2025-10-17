@@ -16,12 +16,6 @@ This package is built for **sociological, psychological, and health research**, 
 - **Publication readiness** (consistent fonts, spacing, and annotation),
 - **Reproducibility** (functions that produce identical output from standardized scripts).
 
-It implements the lab’s **“Work Health Data Visualizations Styles 🎨”** framework — a system emphasizing:
-- White, minimal canvases  
-- Semantic color palettes (`viridis`, `Greys`, `autumn_r`)  
-- Structured external legends  
-- Hierarchical typography and annotation rules  
-
 This allows researchers, students, and collaborators to produce publication-ready visualizations **without manual tweaking or style inconsistency**.
 
 ---
