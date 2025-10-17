@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "workhealthlab"
-version = "0.1.0"
+version = "0.1.1"
 description = "Data visualization and styling tools for the WorkHealth Lab"
-authors = [{ name = "Alexander Wilson", email = "alex@example.com" }]
+authors = [{ name = "Alexander Wilson", email = "alexanderc.wilson@utoronto.ca" }]
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
